@@ -213,21 +213,40 @@ namespace System.Web.WebPages
 
             foreach (var item in dictionary)
             {
-                if (queryString.Length == 0)
+                // Non-recursively handle enumerable values. If we run into nested object graphs,
+                // just handle them the same way we would have if it was a single object. Handling
+                // the enumeration case provides a big win in terms of usability at low cost.
+                var itemEnumerable = item.Value as IEnumerable;
+                if (itemEnumerable == null)
                 {
-                    queryString.Append('?');
+                    AppendQueryString(queryString, item.Key, item.Value);
                 }
                 else
                 {
-                    queryString.Append('&');
+                    foreach (var value in itemEnumerable)
+                    {
+                        AppendQueryString(queryString, item.Key, value);
+                    }
                 }
-
-                string stringValue = Convert.ToString(item.Value, CultureInfo.InvariantCulture);
-
-                queryString.Append(HttpUtility.UrlEncode(item.Key))
-                    .Append('=')
-                    .Append(HttpUtility.UrlEncode(stringValue));
             }
+        }
+
+        private static void AppendQueryString(StringBuilder queryString, string key, object value)
+        {
+            if (queryString.Length == 0)
+            {
+                queryString.Append('?');
+            }
+            else
+            {
+                queryString.Append('&');
+            }
+
+            string stringValue = Convert.ToString(value, CultureInfo.InvariantCulture);
+
+            queryString.Append(HttpUtility.UrlEncode(key))
+                       .Append('=')
+                       .Append(HttpUtility.UrlEncode(stringValue));
         }
 
         /// <summary>
